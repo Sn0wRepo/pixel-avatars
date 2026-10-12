@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Avatars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14; --panel: #151922; --panel-2: #1b2030; --line: #262d3d;
+    --text: #e8ecf3; --muted: #8a93a6; --accent: #f5c542; --accent-ink: #1a1405; --radius: 10px;
+    --pixel: 'Silkscreen', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background-image: radial-gradient(circle at 1px 1px, #1c2130 1px, transparent 0);
+    background-size: 16px 16px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 16px 64px; }
+  header { margin-bottom: 32px; }
+  h1 { font-family: var(--pixel); font-weight: 400; font-size: clamp(26px, 6vw, 40px); margin: 0 0 8px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin: 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .card + .card { margin-top: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .5px; }
+  input[type=text] {
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; font: 13px var(--mono); outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    flex: 1; background: var(--bg); color: var(--muted); border: 0; padding: 9px 8px; cursor: pointer;
+    font: 12px var(--pixel);
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .group { margin-top: 16px; }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-row input { flex: 1; accent-color: var(--accent); }
+  .range-row output { font: 13px var(--mono); min-width: 52px; text-align: right; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  button.btn {
+    font-family: var(--pixel); font-size: 12px; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  }
+  button.btn.ghost { background: transparent; color: var(--accent); }
+  .preview { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .stage {
+    width: 100%; display: flex; justify-content: center; align-items: center; padding: 24px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; max-width: 100%; }
+  .sizes { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .sizes figure { margin: 0; text-align: center; font-size: 11px; color: var(--muted); }
+  .sizes canvas { margin: 0 auto 6px; }
+  .sizes .round { border-radius: 50%; }
+  .palette { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+  .swatch { flex: 1 1 120px; display: flex; gap: 8px; align-items: center; font: 11px var(--mono); color: var(--muted); }
+  .swatch i { flex: 0 0 22px; height: 22px; border: 1px solid var(--line); }
+  .note { font-size: 12px; color: var(--muted); }
+  .note code { font-family: var(--mono); color: var(--text); }
+  .gallery-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  h2 { font-family: var(--pixel); font-weight: 400; font-size: 16px; margin: 0; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
+  .gallery button {
+    padding: 0; border: 2px solid transparent; background: var(--panel-2); border-radius: 6px; cursor: pointer;
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .gallery button:hover, .gallery button:focus-visible { border-color: var(--accent); outline: none; }
+  .gallery canvas { width: 48px; height: 48px; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Pixel <span>Avatars</span></h1>
+    <p class="sub">Deterministic pixel identicons from a wallet address. Same input, same avatar, every time.</p>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <label for="seedInput">Address or seed</label>
+        <input type="text" id="seedInput" spellcheck="false" autocomplete="off" placeholder="0x...">
+        <div class="actions">
+          <button class="btn ghost" id="randomBtn">Random</button>
+          <button class="btn ghost" id="connectBtn">Use my wallet</button>
+        </div>
+
+        <div class="group">
+          <label>Style</label>
+          <div class="seg" role="group">
+            <button id="styleBlockies" aria-pressed="true">Blockies</button>
+            <button id="stylePixelId" aria-pressed="false">PixelID</button>
+          </div>
+          <p class="note" id="styleNote"></p>
+        </div>
+
+        <div class="group" id="gridGroup">
+          <label for="gridRange">Grid</label>
+          <div class="range-row"><input type="range" id="gridRange" min="5" max="16" value="8"><output id="gridOut">8×8</output></div>
+        </div>
+
+        <div class="group">
+          <label for="exportRange">Export size</label>
+          <div class="range-row"><input type="range" id="exportRange" min="1" max="64" value="32"><output id="exportOut">256px</output></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="pngBtn">Download PNG</button>
+          <button class="btn ghost" id="svgBtn">Download SVG</button>
+          <button class="btn ghost" id="copySvgBtn">Copy SVG</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card preview">
+        <div class="stage"><canvas id="bigCanvas"></canvas></div>
+        <div class="sizes" id="sizes"></div>
+        <div class="palette" id="palette"></div>
+      </div>
+
+      <div class="card">
+        <div class="gallery-head">
+          <h2>Random wallets</h2>
+          <button class="btn ghost" id="shuffleBtn">Shuffle</button>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>PixelID output equals <code>PixelAvatarRenderer.svgOf(address)</code> from <code>contracts/PixelAvatar.sol</code></footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---- keccak256 (Ethereum flavour, pre-NIST padding). Dependency-free. ----
+  const keccak256 = (() => {
+    const M = (1n << 64n) - 1n;
+    const RC = [
+      0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+      0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+      0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+      0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+      0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+      0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n,
+    ];
+    const ROT = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14];
+    const rotl = (v, n) => (n === 0 ? v : ((v << BigInt(n)) | (v >> BigInt(64 - n))) & M);
+    function permute(s) {
+      const C = new Array(5), B = new Array(25);
+      for (let r = 0; r < 24; r++) {
+        for (let x = 0; x < 5; x++) C[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
+        for (let x = 0; x < 5; x++) {
+          const d = C[(x + 4) % 5] ^ rotl(C[(x + 1) % 5], 1);
+          for (let y = 0; y < 25; y += 5) s[x + y] ^= d;
+        }
+        for (let x = 0; x < 5; x++)
+          for (let y = 0; y < 5; y++) B[y + 5 * ((2 * x + 3 * y) % 5)] = rotl(s[x + 5 * y], ROT[x + 5 * y]);
+        for (let y = 0; y < 25; y += 5)
+          for (let x = 0; x < 5; x++) s[x + y] = B[x + y] ^ (~B[((x + 1) % 5) + y] & M & B[((x + 2) % 5) + y]);
+        s[0] ^= RC[r];
+      }
+    }
+    return (input) => {
+      const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+      const rate = 136, len = data.length + 1, padded = new Uint8Array(Math.ceil(len / rate) * rate);
+      padded.set(data); padded[data.length] = 0x01; padded[padded.length - 1] |= 0x80;
+      const s = new Array(25).fill(0n);
+      for (let off = 0; off < padded.length; off += rate) {
+        for (let i = 0; i < rate / 8; i++) {
+          let lane = 0n;
+          for (let b = 7; b >= 0; b--) lane = (lane << 8n) | BigInt(padded[off + i * 8 + b]);
+          s[i] ^= lane;
+        }
+        permute(s);
+      }
+      const out = new Uint8Array(32);
+      for (let i = 0; i < 4; i++) { let lane = s[i]; for (let b = 0; b < 8; b++) { out[i * 8 + b] = Number(lane & 0xffn); lane >>= 8n; } }
+      return out;
+    };
+  })();
+  const fromHex = (hex) => {
+    const h = hex.replace(/^0x/i, '');
+    const out = new Uint8Array(h.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i * 2, 2), 16);
+    return out;
+  };
+  const isAddress = (s) => /^0x[0-9a-fA-F]{40}$/.test(s);
+
+  // ======================================================================
+  // Generators. Each returns { size, cells: Uint8Array(size*size), colors: [fg, bg, spot] }
+  // cells: 0 = background, 1 = foreground, 2 = spot
+  // ======================================================================
+
+  /**
+   * Blockies: port of the classic ethereum-blockies algorithm (the pixel identicon MetaMask
+   * offers in Settings > General > Account identicon). Seed with the lowercase address for parity.
+   */
+  function blockies(seed, size = 8) {
+    const rs = [0, 0, 0, 0];
+    for (let i = 0; i < seed.length; i++) rs[i % 4] = ((rs[i % 4] << 5) - rs[i % 4]) + seed.charCodeAt(i);
+    const rand = () => {
+      const t = rs[0] ^ (rs[0] << 11);
+      rs[0] = rs[1]; rs[1] = rs[2]; rs[2] = rs[3];
+      rs[3] = rs[3] ^ (rs[3] >> 19) ^ t ^ (t >> 8);
+      return (rs[3] >>> 0) / ((1 << 31) >>> 0);
+    };
+    const color = () => {
+      const h = Math.floor(rand() * 360);
+      const s = rand() * 60 + 40;
+      const l = (rand() + rand() + rand() + rand()) * 25;
+      return `hsl(${h},${s}%,${l}%)`;
+    };
+    const fg = color(), bg = color(), spot = color();
+    const cells = new Uint8Array(size * size);
+    const dataWidth = Math.ceil(size / 2), mirrorWidth = size - dataWidth;
+    for (let y = 0; y < size; y++) {
+      const row = [];
+      for (let x = 0; x < dataWidth; x++) row[x] = Math.floor(rand() * 2.3);
+      const full = row.concat(row.slice(0, mirrorWidth).reverse());
+      for (let x = 0; x < size; x++) cells[y * size + x] = full[x];
+    }
+    return { size, cells, colors: [fg, bg, spot] };
+  }
+
+  /** PixelID v1: byte-for-byte the algorithm in contracts/PixelAvatar.sol. Addresses only. */
+  function pixelId(address) {
+    const h = keccak256(fromHex(address));
+    const c = keccak256(h);
+    const light = [35 + (h[9] % 25), 82 + (h[10] % 12), 50 + (h[11] % 25)];
+    const colors = [0, 1, 2].map((i) => {
+      const hue = ((h[2 * i] << 8) | h[2 * i + 1]) % 360;
+      const sat = 40 + (h[6 + i] % 50);
+      return `hsl(${hue},${sat}%,${light[i]}%)`;
+    });
+    const cells = new Uint8Array(64);
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 4; x++) {
+        const v = c[y * 4 + x] % 100;
+        const cell = v < 40 ? 0 : v < 82 ? 1 : 2;
+        cells[y * 8 + x] = cell;
+        cells[y * 8 + (7 - x)] = cell;
+      }
+    }
+    return { size: 8, cells, colors };
+  }
+
+  /** SVG with one rect per non-background cell. For PixelID this equals the Solidity output exactly. */
+  function toSvg({ size, cells, colors }) {
+    let out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">`
+      + `<rect width="${size}" height="${size}" fill="${colors[1]}"/>`;
+    for (let i = 0; i < cells.length; i++) {
+      const v = cells[i];
+      if (!v) continue;
+      out += `<rect x="${i % size}" y="${Math.floor(i / size)}" width="1" height="1" fill="${v === 1 ? colors[0] : colors[2]}"/>`;
+    }
+    return out + '</svg>';
+  }
+
+  /** Draw at an integer scale so every logical pixel is an exact square of device pixels. */
+  function draw(canvas, icon, scale) {
+    const { size, cells, colors } = icon;
+    canvas.width = canvas.height = size * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = colors[1];
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < cells.length; i++) {
+      if (!cells[i]) continue;
+      ctx.fillStyle = cells[i] === 1 ? colors[0] : colors[2];
+      ctx.fillRect((i % size) * scale, Math.floor(i / size) * scale, scale, scale);
+    }
+  }
+
+  // ======================================================================
+  // UI
+  // ======================================================================
+  const $ = (id) => document.getElementById(id);
+  const state = { style: 'blockies', grid: 8, exportScale: 32, current: null };
+  const randomAddress = () => '0x' + Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, '0')).join('');
+
+  function makeIcon(seed) {
+    if (state.style === 'pixelid') return isAddress(seed) ? pixelId(seed) : null;
+    return blockies(isAddress(seed) ? seed.toLowerCase() : seed, state.grid);
+  }
+
+  /** Largest integer scale that keeps the preview inside its box (whole device pixels). */
+  function previewScale(size) {
+    const box = Math.min($('bigCanvas').parentElement.clientWidth - 48, 320);
+    const dpr = window.devicePixelRatio || 1;
+    return Math.max(1, Math.floor((box * dpr) / size));
+  }
+
+  function render() {
+    const seed = $('seedInput').value.trim();
+    const icon = seed ? makeIcon(seed) : null;
+    state.current = icon;
+    const big = $('bigCanvas');
+    if (!icon) {
+      big.width = big.height = 1;
+      $('sizes').innerHTML = `<p class="note">${state.style === 'pixelid' ? 'PixelID needs a 0x address.' : 'Type an address or any text.'}</p>`;
+      $('palette').innerHTML = '';
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const scale = previewScale(icon.size);
+    draw(big, icon, scale);
+    big.style.width = big.style.height = `${(icon.size * scale) / dpr}px`;
+
+    $('sizes').innerHTML = '';
+    for (const px of [16, 24, 32, 48]) {
+      const fig = document.createElement('figure');
+      const c = document.createElement('canvas');
+      const s = Math.max(1, Math.round((px * dpr) / icon.size));
+      draw(c, icon, s);
+      c.style.width = c.style.height = `${(icon.size * s) / dpr}px`;
+      if (px === 24) c.className = 'round';
+      fig.append(c, `${px}px${px === 24 ? ' round' : ''}`);
+      $('sizes').append(fig);
+    }
+
+    const names = ['Foreground', 'Background', 'Spot'];
+    $('palette').innerHTML = icon.colors.map((c, i) => `<div class="swatch"><i style="background:${c}"></i><span>${names[i]}<br>${c.replace(/(\.\d{2})\d+/g, '$1')}</span></div>`).join('');
+  }
+
+  function setStyle(style) {
+    state.style = style;
+    $('styleBlockies').setAttribute('aria-pressed', String(style === 'blockies'));
+    $('stylePixelId').setAttribute('aria-pressed', String(style === 'pixelid'));
+    $('gridGroup').hidden = style === 'pixelid';
+    $('styleNote').innerHTML = style === 'pixelid'
+      ? 'On-chain style. Matches <code>PixelAvatar.sol</code> pixel for pixel.'
+      : 'Classic ethereum-blockies, same as MetaMask&rsquo;s Blockies identicon at 8×8.';
+    updateExportLabel();
+    render();
+    renderGallery(false);
+  }
+
+  function updateExportLabel() {
+    const size = state.style === 'pixelid' ? 8 : state.grid;
+    $('exportOut').textContent = `${size * state.exportScale}px`;
+  }
+
+  let galleryAddrs = [];
+  function renderGallery(reshuffle = true) {
+    if (reshuffle || !galleryAddrs.length) galleryAddrs = Array.from({ length: 24 }, randomAddress);
+    const g = $('gallery');
+    g.innerHTML = '';
+    for (const addr of galleryAddrs) {
+      const b = document.createElement('button');
+      b.title = addr;
+      const c = document.createElement('canvas');
+      const icon = makeIcon(addr);
+      draw(c, icon, Math.max(1, Math.round((48 * (window.devicePixelRatio || 1)) / icon.size)));
+      b.append(c);
+      b.onclick = () => { $('seedInput').value = addr; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      g.append(b);
+    }
+  }
+
+  function fileName(ext) {
+    const seed = $('seedInput').value.trim().replace(/[^a-z0-9]/gi, '').slice(0, 42) || 'avatar';
+    return `${state.style}-${seed}.${ext}`;
+  }
+  function download(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---- wiring ----
+  $('seedInput').addEventListener('input', render);
+  $('randomBtn').onclick = () => { $('seedInput').value = randomAddress(); render(); };
+  $('styleBlockies').onclick = () => setStyle('blockies');
+  $('stylePixelId').onclick = () => setStyle('pixelid');
+  $('gridRange').oninput = (e) => { state.grid = +e.target.value; $('gridOut').textContent = `${state.grid}×${state.grid}`; updateExportLabel(); render(); renderGallery(false); };
+  $('exportRange').oninput = (e) => { state.exportScale = +e.target.value; updateExportLabel(); };
+  $('shuffleBtn').onclick = () => renderGallery(true);
+  $('pngBtn').onclick = () => {
+    if (!state.current) return;
+    const c = document.createElement('canvas');
+    draw(c, state.current, state.exportScale);
+    c.toBlob((b) => download(b, fileName('png')), 'image/png');
+  };
+  $('svgBtn').onclick = () => state.current && download(new Blob([toSvg(state.current)], { type: 'image/svg+xml' }), fileName('svg'));
+  $('copySvgBtn').onclick = () => {
+    if (!state.current) return;
+    navigator.clipboard.writeText(toSvg(state.current)).then(() => {
+      $('copySvgBtn').textContent = 'Copied'; setTimeout(() => ($('copySvgBtn').textContent = 'Copy SVG'), 1200);
+    });
+  };
+  $('connectBtn').onclick = async () => {
+    if (!window.ethereum) { $('connectBtn').textContent = 'No wallet found'; return; }
+    try {
+      const [a] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      $('seedInput').value = a; render();
+    } catch { /* rejected */ }
+  };
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); });
+
+  // Exposed for tests / other scripts.
+  window.PixelAvatars = { blockies, pixelId, toSvg };
+
+  $('seedInput').value = randomAddress();
+  setStyle('blockies');
+})();
+</script>
+</body>
+</html>
